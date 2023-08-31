@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@tensorflow/tfjs": "^4.10.0",
+    "nsfwjs": "^2.4.2"
+  }
+}

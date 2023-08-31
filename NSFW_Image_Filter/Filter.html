@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Image Upload</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <style>
+    .blurred {
+      filter: blur(8px);
+    }
+    .message {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    .safe {
+      color: green;
+    }
+    .unsafe {
+      color: red;
+    }
+    .preview-image {
+      max-width: 100%;
+      height: auto;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.10.0/dist/tf.js"></script><!--must use this-->
+  <script src="https://unpkg.com/nsfwjs"></script> <!--must use this-->
+  <script src="ImageFilter.js"></script>
+  <!--git hub link :https://github.com/infinitered/nsfwjs/tree/master-->
+  <script>
+    window.addEventListener('DOMContentLoaded', async () => {
+      const uploadInput = document.getElementById('upload-input');
+      const preview = document.getElementById('preview');
+      const message = document.getElementById('message');
+      
+      // Load NSFWJS model
+      const model = await nsfwjs.load('/NSFW_Image_Filter/', { type: 'graph' });//must use this
+      
+      // Function to handle image preview
+      function handleImageUpload(event) {
+        const file = event.target.files[0];
+        if (file && file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            const imageUrl = e.target.result;
+            const img = new Image();
+            img.src = imageUrl;
+            img.onload = () => {
+              preview.innerHTML = '';
+              const imgContainer = document.createElement('div');
+              imgContainer.classList.add('col-12');
+              const previewImage = document.createElement('img');
+              previewImage.classList.add('preview-image');
+              previewImage.src = imageUrl;
+              imgContainer.appendChild(previewImage);
+              preview.appendChild(imgContainer);
+              classifyImage(previewImage);
+            };
+          };
+          reader.readAsDataURL(file);
+        } else {
+          preview.innerHTML = '';
+        }
+      }
+
+      // Add event listener to the upload input
+      uploadInput.addEventListener('change', handleImageUpload);
+
+      // Function to classify the image
+      async function classifyImage(img) {
+        // Classify the image
+        const predictions = await model.classify(img);
+        let unsafeProbability = 0;
+        let safeProbability = 0;
+        const unsafeClasses = ["Porn", "Hentai"];
+        const safeClasses = ["Neutral", "Drawing"];
+
+        predictions.forEach(prediction => {
+          if (unsafeClasses.includes(prediction.className)) {
+            unsafeProbability += prediction.probability;
+          } else if (safeClasses.includes(prediction.className)) {
+            safeProbability += prediction.probability;
+          }
+        });
+
+        if (unsafeProbability > safeProbability) {
+          img.classList.add('blurred');
+          message.classList.add('unsafe');
+          message.classList.remove('safe');
+          message.textContent = "Your image contains unsuitable content! Please upload another image.";
+        } else {
+          img.classList.remove('blurred');
+          message.classList.add('safe');
+          message.classList.remove('unsafe');
+          message.textContent = "Upload Successful!";
+        }
+      }
+    });
+  </script>
+</head>
+<body>
+  <div class="container">
+    <div class="row">
+      <div class="col-md-6 offset-md-3">
+        <div class="card mt-5">
+          <div class="card-body">
+            <h5 class="card-title">Image Upload</h5>
+            <input type="file" id="upload-input" accept="image/*" class="mb-3">
+            <div id="preview"></div>
+            <div id="message" class="message"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
